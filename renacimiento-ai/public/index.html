@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Booth Renacentista AI</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <!-- Iconos Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'gold': '#C5A059',
+                        'gold-dark': '#8A6E36',
+                        'museum-black': '#1a1a1a',
+                        'canvas': '#f4ebd0',
+                    },
+                    fontFamily: {
+                        'serif': ['"Playfair Display"', 'serif'],
+                        'display': ['"Cinzel"', 'serif'],
+                    },
+                    animation: {
+                        'countdown': 'ping 1s cubic-bezier(0, 0, 0.2, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0f0f0f;
+            background-image: radial-gradient(#2a2a2a 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        /* Efecto de Marco de Cuadro Antiguo */
+        .frame-container {
+            position: relative;
+            box-shadow: 
+                0 10px 30px rgba(0,0,0,0.5),
+                inset 0 0 20px rgba(0,0,0,0.8);
+            border: 12px solid #3d2e18;
+            border-radius: 4px;
+            outline: 4px solid #C5A059;
+            outline-offset: -8px;
+            background: #000;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .frame-inner-border {
+            pointer-events: none;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border: 2px solid rgba(197, 160, 89, 0.3);
+            z-index: 10;
+        }
+
+        .gold-text-shadow {
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(197, 160, 89, 0.3);
+        }
+
+        /* Animación de carga */
+        @keyframes paint-stroke {
+            0% { transform: scaleX(0); transform-origin: left; }
+            50% { transform: scaleX(1); transform-origin: left; }
+            51% { transform: scaleX(1); transform-origin: right; }
+            100% { transform: scaleX(0); transform-origin: right; }
+        }
+
+        .loading-bar {
+            animation: paint-stroke 2s infinite ease-in-out;
+        }
+        
+        .texture-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 20;
+            mix-blend-mode: overlay;
+        }
+
+        /* Radio Buttons personalizados estilo antiguo */
+        .archetype-radio:checked + label {
+            background-color: #C5A059;
+            color: #1a1a1a;
+            border-color: #C5A059;
+        }
+    </style>
+</head>
+<body class="text-gray-200 min-h-screen flex flex-col font-serif">
+
+    <!-- Header -->
+    <header class="py-6 text-center relative z-10 bg-museum-black border-b border-gold/30">
+        <h1 class="text-3xl md:text-5xl font-display text-gold gold-text-shadow mb-2">Renaissance AI Studio</h1>
+        <p class="text-xs md:text-sm text-gray-400 italic tracking-widest">ATELIER DIGITAL</p>
+    </header>
+
+    <!-- Main App Area -->
+    <main class="flex-grow flex flex-col items-center justify-center p-4 md:p-8 w-full max-w-7xl mx-auto">
+        
+        <!-- Notificaciones de Estado -->
+        <div id="statusMessage" class="hidden mb-6 px-6 py-3 rounded-lg border border-gold/50 bg-black/80 text-gold text-center max-w-lg mx-auto transition-all fixed top-24 z-50 shadow-2xl">
+            <!-- Texto dinámico aquí -->
+        </div>
+
+        <!-- Controls Area (New) -->
+        <div class="w-full max-w-4xl mb-6 flex flex-col md:flex-row justify-center items-center gap-4 md:gap-8">
+            <div class="flex items-center gap-2">
+                <span class="text-gold text-xs font-display tracking-widest uppercase">Elegir Arquetipo:</span>
+                <div class="flex bg-black/50 border border-gray-700 rounded-sm p-1">
+                    <input type="radio" name="archetype" id="arch-lady" value="Lady" class="archetype-radio hidden">
+                    <label for="arch-lady" class="cursor-pointer px-4 py-1 text-xs md:text-sm transition-colors rounded-sm hover:text-gold border border-transparent">Dama</label>
+                    
+                    <input type="radio" name="archetype" id="arch-lord" value="Nobleman" class="archetype-radio hidden">
+                    <label for="arch-lord" class="cursor-pointer px-4 py-1 text-xs md:text-sm transition-colors rounded-sm hover:text-gold border border-transparent">Caballero</label>
+                    
+                    <input type="radio" name="archetype" id="arch-royal" value="Royalty" class="archetype-radio hidden" checked>
+                    <label for="arch-royal" class="cursor-pointer px-4 py-1 text-xs md:text-sm transition-colors rounded-sm hover:text-gold border border-transparent">Realeza</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Split Screen Container -->
+        <div class="flex flex-col lg:flex-row gap-8 w-full items-stretch justify-center">
+            
+            <!-- Panel Izquierdo: Webcam -->
+            <div class="flex-1 flex flex-col items-center max-w-xl mx-auto w-full">
+                <div class="w-full flex justify-between items-center mb-3 px-2">
+                    <span class="text-gold font-display tracking-widest text-sm">CÁMARA OSCURA</span>
+                    <div class="h-px bg-gold/30 flex-grow mx-4"></div>
+                    <button id="switchCameraBtn" class="text-gold hover:text-white transition-colors hidden" title="Cambiar Cámara">
+                        <i data-lucide="switch-camera" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                
+                <div class="frame-container w-full aspect-[3/4] relative group bg-black">
+                    <video id="webcam" autoplay playsinline muted class="w-full h-full object-cover transform scale-x-[-1]"></video>
+                    <div class="frame-inner-border"></div>
+                    
+                    <!-- Countdown Overlay -->
+                    <div id="countdown" class="absolute inset-0 z-30 flex items-center justify-center bg-black/40 hidden backdrop-blur-sm">
+                        <span id="countdownText" class="text-9xl text-gold font-display drop-shadow-lg font-bold">3</span>
+                    </div>
+
+                    <!-- Overlay de instrucciones si la cámara no está activa -->
+                    <div id="cameraPrompt" class="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-20 text-center p-6 transition-opacity duration-500">
+                        <i data-lucide="aperture" class="w-12 h-12 text-gold mb-4 opacity-80"></i>
+                        <p class="text-white mb-6 font-serif italic">Permite el acceso para reflejar tu alma.</p>
+                        <button id="startBtn" class="bg-gold hover:bg-gold-dark text-black font-bold py-3 px-8 rounded-sm transition-colors font-display tracking-wider border border-white/20 shadow-[0_0_15px_rgba(197,160,89,0.5)]">
+                            INICIAR CÁMARA
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Botón de Captura -->
+                <div class="mt-6 w-full flex justify-center">
+                    <button id="captureBtn" class="hidden group relative items-center justify-center px-10 py-4 text-lg font-bold text-black transition-all duration-300 bg-gradient-to-b from-[#D4AF37] to-[#AA8C2C] font-display rounded-sm hover:scale-105 shadow-[0_0_20px_rgba(197,160,89,0.3)] border border-[#FFD700]/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:grayscale">
+                        <i data-lucide="brush" class="w-5 h-5 mr-3 group-hover:rotate-12 transition-transform"></i>
+                        <span class="tracking-widest">RETRATARME</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Panel Derecho: Resultado -->
+            <div class="flex-1 flex flex-col items-center max-w-xl mx-auto w-full">
+                <div class="w-full flex justify-between items-center mb-3 px-2">
+                    <i data-lucide="image" class="text-gold w-5 h-5"></i>
+                    <div class="h-px bg-gold/30 flex-grow mx-4"></div>
+                    <span class="text-gold font-display tracking-widest text-sm">ÓLEO SOBRE LIENZO</span>
+                </div>
+
+                <div class="frame-container w-full aspect-[3/4] relative bg-[#1a1510] flex items-center justify-center">
+                    <!-- Placeholder Inicial -->
+                    <div id="placeholder" class="text-center p-8 opacity-40">
+                        <i data-lucide="palette" class="w-16 h-16 text-gold mx-auto mb-4"></i>
+                        <p class="text-gold font-serif italic text-lg">La musa espera...</p>
+                    </div>
+
+                    <!-- Imagen Generada -->
+                    <img id="resultImage" class="absolute inset-0 w-full h-full object-cover hidden z-10" alt="Retrato Renacentista">
+                    
+                    <!-- Overlay de textura -->
+                    <div class="texture-overlay z-20"></div>
+                    <div class="frame-inner-border z-30"></div>
+
+                    <!-- Loading State -->
+                    <div id="loader" class="absolute inset-0 bg-black/95 z-40 hidden flex-col items-center justify-center text-center p-6">
+                        <div class="w-full max-w-[200px] h-1 bg-gray-800 rounded mb-6 overflow-hidden relative border border-gray-700">
+                            <div class="loading-bar absolute inset-0 bg-gold"></div>
+                        </div>
+                        <p id="loadingText" class="text-gold font-serif text-xl animate-pulse mb-2">Mezclando pigmentos...</p>
+                        <p class="text-gray-500 text-xs mt-2 max-w-xs italic">"El arte nunca se termina, solo se abandona." - Da Vinci</p>
+                    </div>
+                </div>
+
+                <!-- Acciones del Resultado -->
+                <div id="resultActions" class="mt-6 flex flex-wrap justify-center gap-3 hidden w-full">
+                    <button id="downloadBtn" class="flex-1 min-w-[120px] flex items-center justify-center border border-gold bg-gold/10 text-gold hover:bg-gold hover:text-black py-3 transition-colors font-display text-sm rounded-sm tracking-wider uppercase">
+                        <i data-lucide="download" class="w-4 h-4 mr-2"></i> Guardar
+                    </button>
+                    
+                    <button id="shareBtn" class="flex-1 min-w-[120px] items-center justify-center border border-gold bg-gold/10 text-gold hover:bg-gold hover:text-black py-3 transition-colors font-display text-sm rounded-sm tracking-wider uppercase hidden">
+                        <i data-lucide="share-2" class="w-4 h-4 mr-2"></i> Compartir
+                    </button>
+
+                    <button id="resetBtn" class="flex-1 min-w-[120px] flex items-center justify-center border border-gray-600 text-gray-400 hover:text-white hover:border-white py-3 transition-colors font-display text-sm rounded-sm tracking-wider uppercase">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4 mr-2"></i> Nuevo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Canvas Oculto para procesar la imagen de entrada -->
+    <canvas id="captureCanvas" class="hidden"></canvas>
+    
+    <!-- Canvas Oculto para composición final (Descarga) -->
+    <canvas id="compositionCanvas" class="hidden"></canvas>
+
+    <footer class="py-6 text-center text-gray-600 text-xs border-t border-gray-800 mt-8">
+        <p class="font-serif">Potenciado por Gemini 2.5 Image Preview | Estilo Renacentista 1500-1600</p>
+    </footer>
+
+    <script>
+        // Inicializar Iconos
+        lucide.createIcons();
+
+        // Configuración
+       // const apiKey = ""; // La clave se inyectará automáticamente en el entorno
+        
+        // Elementos del DOM
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('captureCanvas');
+        const compositionCanvas = document.getElementById('compositionCanvas');
+        const startBtn = document.getElementById('startBtn');
+        const captureBtn = document.getElementById('captureBtn');
+        const switchCameraBtn = document.getElementById('switchCameraBtn');
+        const cameraPrompt = document.getElementById('cameraPrompt');
+        const resultImage = document.getElementById('resultImage');
+        const placeholder = document.getElementById('placeholder');
+        const loader = document.getElementById('loader');
+        const loadingText = document.getElementById('loadingText');
+        const resultActions = document.getElementById('resultActions');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const shareBtn = document.getElementById('shareBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        const countdownEl = document.getElementById('countdown');
+        const countdownText = document.getElementById('countdownText');
+        const archetypeInputs = document.querySelectorAll('input[name="archetype"]');
+
+        let stream = null;
+        let currentFacingMode = "user"; // 'user' (frontal) o 'environment' (trasera)
+        let generatedImageBlob = null; // Para compartir
+
+        // Comprobamos si Web Share API es soportado
+        if (navigator.share && navigator.canShare) {
+            shareBtn.classList.remove('hidden');
+            shareBtn.classList.add('flex');
+        }
+
+        // Mensajes de carga aleatorios
+        const loadingMessages = [
+            "Mezclando pigmentos raros...",
+            "Estudiando la iluminación...",
+            "Aplicando capas de barniz...",
+            "Consultando a los viejos maestros...",
+            "Puliendo el marco dorado...",
+            "Aplicando la técnica del claroscuro..."
+        ];
+
+        function showStatus(msg, type = 'info') {
+            statusMessage.textContent = msg;
+            statusMessage.classList.remove('hidden', 'text-red-400', 'text-gold');
+            statusMessage.classList.add('block');
+            if (type === 'error') {
+                statusMessage.classList.add('text-red-400');
+            } else {
+                statusMessage.classList.add('text-gold');
+            }
+            setTimeout(() => {
+                statusMessage.classList.add('hidden');
+            }, 5000);
+        }
+
+        async function initCamera(facingMode = "user") {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: facingMode,
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }, 
+                    audio: false 
+                });
+                video.srcObject = stream;
+                
+                // Espejo solo si es cámara frontal
+                if (facingMode === "user") {
+                    video.classList.add('scale-x-[-1]');
+                } else {
+                    video.classList.remove('scale-x-[-1]');
+                }
+
+                cameraPrompt.classList.add('hidden');
+                captureBtn.classList.remove('hidden');
+                captureBtn.classList.add('flex');
+
+                // Verificar si hay múltiples cámaras para mostrar botón de switch
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                if (videoDevices.length > 1) {
+                    switchCameraBtn.classList.remove('hidden');
+                }
+
+            } catch (err) {
+                console.error("Error accediendo a la cámara:", err);
+                showStatus("No se pudo acceder a la cámara. Por favor verifica los permisos.", "error");
+            }
+        }
+
+        startBtn.addEventListener('click', () => initCamera(currentFacingMode));
+
+        switchCameraBtn.addEventListener('click', () => {
+            currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
+            initCamera(currentFacingMode);
+        });
+
+        // Lógica de Captura con Cuenta Regresiva
+        captureBtn.addEventListener('click', async () => {
+            captureBtn.disabled = true;
+            
+            // Iniciar cuenta regresiva
+            countdownEl.classList.remove('hidden');
+            let count = 3;
+            countdownText.textContent = count;
+            
+            const timer = setInterval(async () => {
+                count--;
+                if (count > 0) {
+                    countdownText.textContent = count;
+                } else {
+                    clearInterval(timer);
+                    countdownEl.classList.add('hidden');
+                    // "Flash" visual o sonido podría ir aquí
+                    await performCapture();
+                }
+            }, 1000);
+        });
+
+        async function performCapture() {
+            // UI Update
+            captureBtn.classList.add('opacity-50');
+            loader.classList.remove('hidden');
+            loader.classList.add('flex');
+            placeholder.classList.add('hidden');
+            resultImage.classList.add('hidden');
+            resultActions.classList.add('hidden');
+            
+            // Ciclo de mensajes
+            let msgIdx = 0;
+            const msgInterval = setInterval(() => {
+                loadingText.textContent = loadingMessages[msgIdx % loadingMessages.length];
+                msgIdx++;
+            }, 1500);
+
+            // Capturar Canvas
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            // Importante: Si la cámara es frontal, invertimos para que la IA reciba la imagen natural, no espejo
+            // O podemos enviarla espejo si queremos que la pintura mire igual que el usuario se ve. 
+            // Para "Photo Booth" suele gustar más espejo (lo que veo es lo que obtengo).
+            if (currentFacingMode === "user") {
+                context.translate(canvas.width, 0);
+                context.scale(-1, 1);
+            }
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imageDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            const base64Image = imageDataUrl.split(',')[1];
+
+            // Obtener arquetipo seleccionado
+            const selectedArchetype = document.querySelector('input[name="archetype"]:checked').value;
+
+            try {
+                const generatedImageBase64 = await generateRenaissancePortrait(base64Image, selectedArchetype);
+                
+                if (generatedImageBase64) {
+                    resultImage.src = `data:image/jpeg;base64,${generatedImageBase64}`;
+                    resultImage.classList.remove('hidden');
+                    resultActions.classList.remove('hidden');
+                    resultActions.classList.add('flex');
+                    
+                    // Preparar imagen compuesta para descarga/share
+                    await prepareComposition(generatedImageBase64);
+                } else {
+                    throw new Error("No se generó imagen.");
+                }
+
+            } catch (error) {
+                console.error(error);
+                showStatus("La musa fue temperamental (Error de API). Intenta de nuevo.", "error");
+                placeholder.classList.remove('hidden');
+            } finally {
+                clearInterval(msgInterval);
+                loader.classList.add('hidden');
+                loader.classList.remove('flex');
+                captureBtn.disabled = false;
+                captureBtn.classList.remove('opacity-50');
+            }
+        }
+
+
+async function generateRenaissancePortrait(base64Input, archetype) {
+    // YA NO USAMOS LA API KEY AQUÍ DIRECTAMENTE
+    // const url = `https://generativelanguage...`; <-- BORRA ESTO
+    
+    // Ahora apuntamos a nuestra propia ruta en Vercel
+    const url = '/api/generate'; 
+    
+    let archetypeDesc = "renaissance nobility";
+    if (archetype === 'Lady') archetypeDesc = "a high-born renaissance noblewoman in a velvet gown";
+    if (archetype === 'Nobleman') archetypeDesc = "a distinguished renaissance nobleman in doublet and hose";
+    if (archetype === 'Royalty') archetypeDesc = "renaissance royalty with gold embroidery and regal bearing";
+
+    const prompt = `Transform this photo into a high-quality 16th-century renaissance oil painting. The subject is portrayed as ${archetypeDesc}. Maintain the EXACT facial structure, eye gaze, and expression of the person. Background should be a dark, moody studio background typical of Rembrandt or Titian. Visible brushstrokes, oil painting texture, dramatic lighting (chiaroscuro). High detail masterpiece.`;
+
+    // Enviamos los datos a nuestro backend en formato simple
+    const payload = {
+        prompt: prompt,
+        imageBase64: base64Input
+    };
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) throw new Error("API Error");
+
+    const data = await response.json();
+    const imagePart = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+    
+    return imagePart?.inlineData?.data;
+}
+
+        // Crear la composición final (Marco + Texto + Imagen)
+        async function prepareComposition(base64Image) {
+            const ctx = compositionCanvas.getContext('2d');
+            const img = new Image();
+            
+            await new Promise((resolve) => {
+                img.onload = resolve;
+                img.src = `data:image/jpeg;base64,${base64Image}`;
+            });
+
+            // Definir tamaño final (mantener aspect ratio pero alta calidad)
+            const width = img.width;
+            const height = img.height;
+            const frameSize = Math.max(width, height) * 0.1; // 10% de borde
+            const bottomPadding = frameSize * 1.5; // Espacio extra abajo para texto
+
+            compositionCanvas.width = width + (frameSize * 2);
+            compositionCanvas.height = height + (frameSize * 2) + bottomPadding;
+
+            // 1. Fondo (Negro/Marrón oscuro marco)
+            ctx.fillStyle = "#1a1510"; // Color marco externo
+            ctx.fillRect(0, 0, compositionCanvas.width, compositionCanvas.height);
+
+            // 2. Borde dorado interno
+            ctx.strokeStyle = "#C5A059";
+            ctx.lineWidth = frameSize * 0.1;
+            ctx.strokeRect(frameSize/2, frameSize/2, compositionCanvas.width - frameSize, compositionCanvas.height - frameSize);
+
+            // 3. Dibujar Imagen
+            ctx.drawImage(img, frameSize, frameSize, width, height);
+
+            // 4. Sombra interna sobre la imagen (simulada)
+            ctx.strokeStyle = "rgba(0,0,0,0.5)";
+            ctx.lineWidth = 4;
+            ctx.strokeRect(frameSize, frameSize, width, height);
+
+            // 5. Texto / Marca
+            ctx.fillStyle = "#C5A059";
+            ctx.textAlign = "center";
+            const fontSize = Math.floor(frameSize * 0.4);
+            ctx.font = `${fontSize}px "Cinzel", serif`; // Fallback a serif si la fuente no carga en canvas context
+            ctx.fillText("RENAISSANCE AI STUDIO", compositionCanvas.width / 2, compositionCanvas.height - (bottomPadding / 2));
+            
+            ctx.fillStyle = "#888";
+            ctx.font = `italic ${Math.floor(fontSize * 0.5)}px serif`;
+            ctx.fillText(new Date().getFullYear(), compositionCanvas.width / 2, compositionCanvas.height - (bottomPadding / 4));
+
+            // Guardar blob para compartir/descargar
+            return new Promise(resolve => {
+                compositionCanvas.toBlob(blob => {
+                    generatedImageBlob = blob;
+                    resolve(blob);
+                }, 'image/jpeg', 0.9);
+            });
+        }
+
+        resetBtn.addEventListener('click', () => {
+            resultImage.classList.add('hidden');
+            resultImage.src = '';
+            placeholder.classList.remove('hidden');
+            resultActions.classList.add('hidden');
+            resultActions.classList.remove('flex');
+            generatedImageBlob = null;
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            if (generatedImageBlob) {
+                const url = URL.createObjectURL(generatedImageBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `renaissance-portrait-${Date.now()}.jpg`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        });
+
+        shareBtn.addEventListener('click', async () => {
+            if (generatedImageBlob && navigator.share) {
+                try {
+                    const file = new File([generatedImageBlob], "renaissance_portrait.jpg", { type: "image/jpeg" });
+                    await navigator.share({
+                        title: 'Mi Retrato Renacentista',
+                        text: 'He convertido mi foto en una obra de arte con IA.',
+                        files: [file]
+                    });
+                } catch (err) {
+                    console.log('Error sharing:', err);
+                    // Fallback silencioso (el usuario canceló o no soportado)
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
