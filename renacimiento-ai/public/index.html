@@ -234,9 +234,6 @@
         // Inicializar Iconos
         lucide.createIcons();
 
-        // Configuración
-       // const apiKey = ""; // La clave se inyectará automáticamente en el entorno
-        
         // Elementos del DOM
         const video = document.getElementById('webcam');
         const canvas = document.getElementById('captureCanvas');
@@ -381,9 +378,7 @@
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             
-            // Importante: Si la cámara es frontal, invertimos para que la IA reciba la imagen natural, no espejo
-            // O podemos enviarla espejo si queremos que la pintura mire igual que el usuario se ve. 
-            // Para "Photo Booth" suele gustar más espejo (lo que veo es lo que obtengo).
+            // Si la cámara es frontal, invertimos para la IA reciba la imagen natural.
             if (currentFacingMode === "user") {
                 context.translate(canvas.width, 0);
                 context.scale(-1, 1);
@@ -424,40 +419,47 @@
             }
         }
 
+        /**
+         * Llama a la función Serverless de Vercel para generar la imagen.
+         * El Vercel backend se encarga de usar la API Key de forma segura.
+         */
+        async function generateRenaissancePortrait(base64Input, archetype) {
+            // -- ESTA ES LA RUTA SEGURA EN VERCEL --
+            // MODIFICACIÓN: La ruta ahora es /api/generate/generate para que coincida con la estructura de carpeta/archivo en Vercel.
+            const url = '/api/generate/generate'; 
+            
+            let archetypeDesc = "renaissance nobility";
+            if (archetype === 'Lady') archetypeDesc = "a high-born renaissance noblewoman in a velvet gown";
+            if (archetype === 'Nobleman') archetypeDesc = "a distinguished renaissance nobleman in doublet and hose";
+            if (archetype === 'Royalty') archetypeDesc = "renaissance royalty with gold embroidery and regal bearing";
 
-async function generateRenaissancePortrait(base64Input, archetype) {
-    // YA NO USAMOS LA API KEY AQUÍ DIRECTAMENTE
-    // const url = `https://generativelanguage...`; <-- BORRA ESTO
-    
-    // Ahora apuntamos a nuestra propia ruta en Vercel
-    const url = '/api/generate'; 
-    
-    let archetypeDesc = "renaissance nobility";
-    if (archetype === 'Lady') archetypeDesc = "a high-born renaissance noblewoman in a velvet gown";
-    if (archetype === 'Nobleman') archetypeDesc = "a distinguished renaissance nobleman in doublet and hose";
-    if (archetype === 'Royalty') archetypeDesc = "renaissance royalty with gold embroidery and regal bearing";
+            const prompt = `Transform this photo into a high-quality 16th-century renaissance oil painting. The subject is portrayed as ${archetypeDesc}. Maintain the EXACT facial structure, eye gaze, and expression of the person. Background should be a dark, moody studio background typical of Rembrandt or Titian. Visible brushstrokes, oil painting texture, dramatic lighting (chiaroscuro). High detail masterpiece.`;
 
-    const prompt = `Transform this photo into a high-quality 16th-century renaissance oil painting. The subject is portrayed as ${archetypeDesc}. Maintain the EXACT facial structure, eye gaze, and expression of the person. Background should be a dark, moody studio background typical of Rembrandt or Titian. Visible brushstrokes, oil painting texture, dramatic lighting (chiaroscuro). High detail masterpiece.`;
+            // El payload se envía a nuestro backend /api/generate/generate
+            const payload = {
+                prompt: prompt,
+                imageBase64: base64Input
+            };
 
-    // Enviamos los datos a nuestro backend en formato simple
-    const payload = {
-        prompt: prompt,
-        imageBase64: base64Input
-    };
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
 
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
+            if (!response.ok) {
+                // Manejo de errores 404, 500, etc., devueltos por Vercel.
+                const errorData = await response.json();
+                console.error("Backend Error:", errorData);
+                throw new Error("Backend Error: Check Vercel logs for /api/generate/generate");
+            }
 
-    if (!response.ok) throw new Error("API Error");
-
-    const data = await response.json();
-    const imagePart = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-    
-    return imagePart?.inlineData?.data;
-}
+            // El backend responde con el JSON de Google
+            const data = await response.json();
+            const imagePart = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+            
+            return imagePart?.inlineData?.data;
+        }
 
         // Crear la composición final (Marco + Texto + Imagen)
         async function prepareComposition(base64Image) {
